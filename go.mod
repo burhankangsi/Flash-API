@@ -1,11 +1,11 @@
-module github.com/burhankangsi/LetsYouTube
+module github.com/burhankangsi/Flash-API
 
 go 1.17
 
 require (
 	github.com/Shopify/sarama v1.28.0
 	github.com/aws/aws-sdk-go v1.43.31
-	github.com/cheggaaa/pb v1.0.29
+	github.com/burhankangsi/LetsYouTube v0.0.0-20220508202637-b1a88100e1f5
 	github.com/confluentinc/confluent-kafka-go v1.8.2
 	github.com/gorilla/mux v1.8.0
 	github.com/segmentio/kafka-go v0.4.31
@@ -13,6 +13,7 @@ require (
 )
 
 require (
+	github.com/cheggaaa/pb v1.0.29 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/eapache/go-resiliency v1.2.0 // indirect
 	github.com/eapache/go-xerial-snappy v0.0.0-20180814174437-776d5712da21 // indirect
