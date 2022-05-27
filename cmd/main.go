@@ -6,10 +6,8 @@ import (
 	"net/http"
 	"os"
 
-	"content"
-
-	"./flash_api"
-
+	"github.com/burhankangsi/LetsYouTube/content"
+	"github.com/burhankangsi/LetsYouTube/flash_api"
 	"github.com/gorilla/mux"
 	log "github.com/sirupsen/logrus"
 )
@@ -53,6 +51,23 @@ func UploadVideoHandler(w http.ResponseWriter, r *http.Request) {
 	if err3 := content.UploadToTopic(prod, handler.Filename); err3 != nil {
 		log.Errorf("Error uploading video to topic. %v", err3)
 	}
+
+	// params := mux.Vars(r)
+	// chanId := params["channelId"]
+
+	// //Creating a new file object
+	// var item content.File
+	// item.Id = strconv.Itoa(rand.Intn(1000000))
+	// item.ChannelId = chanId
+	// item.FileName = handler.Filename
+	// item.UploadTime = strconv.FormatInt(time.Now().Unix(), 10)
+	// item.UploadDate = strconv.Itoa(time.Now().Day())
+
+	// jsonFile, err2 := json.Marshal(item)
+	// if err2 != nil {
+	// 	log.Fatal("Error converting file struct to json. %v", err2)
+	// }
+
 }
 
 func GetVideoObjectHandler(W http.ResponseWriter, R *http.Request) {
@@ -84,6 +99,7 @@ func ListOfVideos(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, "List of videos will be displayed here")
 }
 
+//func initServer(ctx context.Context) (*http.Server, context.Context) {
 func initServer() {
 	//Creating the routers
 	log.Infof("Starting server")
@@ -95,13 +111,37 @@ func initServer() {
 	myRouter.HandleFunc("/video", ListOfVideos).Methods("GET")
 	myRouter.HandleFunc("/", HomePage).Methods("GET")
 
+	// srv := &http.Server{
+	// 	Addr:    "https://vocal-starship-53117c.netlify.app/endpoint",
+	// 	Handler: myRouter,
+	// }
+
+	//go func() {
 	log.Fatal(http.ListenAndServe(":8000", myRouter))
+	//}()
+	//http.ListenAndServe("https://vocal-starship-53117c.netlify.app/endpoint", myRouter)
 	log.Info("Server started")
 
+	//<-ctx.Done()
+
 	log.Info("Server stopped")
+
+	// ctxShutDown, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	// defer func() {
+	// 	cancel()
+	// }()
+
+	//log.Info("Server exited properly")
+
+	//return srv, ctxShutDown
 }
 
 func main() {
+	//ctx, _ := context.WithCancel(context.Background())
+	//server, ctxShutDown := initServer(ctx)
 	initServer()
+	// if err := server.Shutdown(ctxShutDown); err != nil {
+	// 	log.Fatalf("server Shutdown Failed:%+s", err)
+	// }
 	log.Infof("Application closed")
 }
