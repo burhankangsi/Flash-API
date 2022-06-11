@@ -1,16 +1,97 @@
 package main
 
 import (
+	"bytes"
+	"database/sql"
 	"fmt"
 	"io"
 	"net/http"
 	"os"
 
+	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/session"
+	"github.com/aws/aws-sdk-go/service/s3"
 	"github.com/burhankangsi/LetsYouTube/content"
 	"github.com/burhankangsi/LetsYouTube/flash_api"
 	"github.com/gorilla/mux"
+	_ "github.com/lib/pq"
 	log "github.com/sirupsen/logrus"
 )
+
+const (
+	host     = "youtubeclone1.c7itawripsrx.us-east-1.rds.amazonaws.com"
+	port     = 5432
+	user     = "postgres"
+	password = "Postgres"
+	dbname   = "youtubeclone"
+)
+
+type Video struct {
+	videoID      int    `json:"videoid"`
+	videoName    string `json:"videoname"`
+	duration     int64  `json:"duration"`
+	channelID    int    `json:"channelid"`
+	title        string `json:"title"`
+	channelImage string `json:"channelimage"`
+	views        string `json:"views"`
+	timestamp    string `json:"timestamp"`
+	channelName  string `json:"channelname"`
+	uploadDate   string `json:"uploaddate"`
+	uploadTime   string `json:"uploadtime"`
+	thumbnail    string `json:"thumbnail"`
+}
+
+type JsonResponse struct {
+	Type    string  `json:"type"`
+	Data    []Video `json:"data"`
+	Message string  `json:"message"`
+}
+
+type JsonResponse1 struct {
+	Type    string `json:"type"`
+	Data    Video  `json:"data"`
+	Message string `json:"message"`
+}
+
+type JsonResponse2 struct {
+	Type    string   `json:"type"`
+	Data    []string `json:"data"`
+	Message string   `json:"message"`
+}
+
+const (
+	AWS_S3_REGION = "us-east-1"
+	AWS_S3_BUCKET = "youtube-clone-bk"
+)
+
+func uploadImageToS3(filepath string) error {
+	upFile, err := os.Open(filepath)
+	if err != nil {
+		return err
+	}
+	defer upFile.Close()
+
+	upFileInfo, _ := upFile.Stat()
+	var fileSize int64 = upFileInfo.Size()
+	fileBuffer := make([]byte, fileSize)
+	upFile.Read(fileBuffer)
+
+	session, err := session.NewSession(&aws.Config{Region: aws.String(AWS_S3_REGION)})
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	_, err = s3.New(session).PutObject(&s3.PutObjectInput{
+		Bucket:               aws.String(AWS_S3_BUCKET),
+		Key:                  aws.String(filepath),
+		Body:                 bytes.NewReader(fileBuffer),
+		ContentLength:        aws.Int64(fileSize),
+		ContentType:          aws.String(http.DetectContentType(fileBuffer)),
+		ContentDisposition:   aws.String("attachment"),
+		ServerSideEncryption: aws.String("AES256"),
+	})
+	return err
+}
 
 func UploadVideoHandler(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, "Please upload the video")
@@ -51,27 +132,10 @@ func UploadVideoHandler(w http.ResponseWriter, r *http.Request) {
 	if err3 := content.UploadToTopic(prod, handler.Filename); err3 != nil {
 		log.Errorf("Error uploading video to topic. %v", err3)
 	}
-
-	// params := mux.Vars(r)
-	// chanId := params["channelId"]
-
-	// //Creating a new file object
-	// var item content.File
-	// item.Id = strconv.Itoa(rand.Intn(1000000))
-	// item.ChannelId = chanId
-	// item.FileName = handler.Filename
-	// item.UploadTime = strconv.FormatInt(time.Now().Unix(), 10)
-	// item.UploadDate = strconv.Itoa(time.Now().Day())
-
-	// jsonFile, err2 := json.Marshal(item)
-	// if err2 != nil {
-	// 	log.Fatal("Error converting file struct to json. %v", err2)
-	// }
-
 }
 
 func GetVideoObjectHandler(W http.ResponseWriter, R *http.Request) {
-	log.Info("Fetching video...please wait")
+	log.Info("About to download video...please wait")
 	W.Header().Set("Content-Type", "application/json")
 	params := mux.Vars(R)
 	VideoId, ok := params["videoId"]
@@ -91,12 +155,27 @@ func GetVideoObjectHandler(W http.ResponseWriter, R *http.Request) {
 	//json.NewEncoder(W).Encode(item)
 }
 
-func HomePage(w http.ResponseWriter, r *http.Request) {
-	fmt.Fprintf(w, "Welecome to my api")
+func getConnection() *sql.DB {
+	var err error
+	var db *sql.DB
+	//connStr := "postgres://postgres:password@localhost/retrieveTest?sslmode=disable"
+	pg_con := fmt.Sprintf("host=%s port=%d user=%s "+"password=%s dbname=%s sslmode=disable",
+		host, port, user, password, dbname)
+	db, err = sql.Open("postgres", pg_con)
+
+	if err != nil {
+		panic(err)
+	}
+	if err = db.Ping(); err != nil {
+		panic(err)
+	}
+	// this will be printed in the terminal, confirming the connection to the database
+	fmt.Println("Connected to database")
+	return db
 }
 
-func ListOfVideos(w http.ResponseWriter, r *http.Request) {
-	fmt.Fprintf(w, "List of videos will be displayed here")
+func HomePage(w http.ResponseWriter, r *http.Request) {
+	fmt.Fprintf(w, "Welecome to my api")
 }
 
 //func initServer(ctx context.Context) (*http.Server, context.Context) {
@@ -109,39 +188,39 @@ func initServer() {
 	myRouter.HandleFunc("/{channelId}/{videoId}/video.ts", GetVideoObjectHandler).Methods("GET")
 	myRouter.HandleFunc("/video/{channelId}", UploadVideoHandler).Methods("POST")
 	myRouter.HandleFunc("/video", ListOfVideos).Methods("GET")
-	myRouter.HandleFunc("/", HomePage).Methods("GET")
+	myRouter.HandleFunc("/", ListOfAllVideos).Methods("GET")
+	myRouter.HandleFunc("/trending", Trending).Methods("GET")
+	myRouter.HandleFunc("/shorts", YoutubeShorts).Methods("GET")
+	myRouter.HandleFunc("/feed/subscriptions/{channelId}", Subscriptions).Methods("GET")
+	myRouter.HandleFunc("/feed/libray/watchlater/{channelId}", WatchLater).Methods("GET")
+	myRouter.HandleFunc("/feed/libray/likedvideos/{channelId}", LikedVideos).Methods("GET")
+	myRouter.HandleFunc("/feed/history/{channelId}", History).Methods("GET")
+	myRouter.HandleFunc("/feed/playlist/{channelId}/{playlistId}", Playlist).Methods("GET")
+	myRouter.HandleFunc("/feed/yourvideos/{channelId}", YourVideos).Methods("GET")
+	myRouter.HandleFunc("/feed/subscriptionlist/{channelId}", SubscriptionList).Methods("GET")
+	myRouter.HandleFunc("/{channelId}/listplaylist", Playlist).Methods("GET")
+	myRouter.HandleFunc("/{channelId}/channellist", Channellist).Methods("GET")
+	myRouter.HandleFunc("/{channelId}/videos", ListChannelVideos).Methods("GET")
+	myRouter.HandleFunc("/video/addTrending/{channelId}", AddTrending).Methods("POST")
+	myRouter.HandleFunc("/video/addHistory/{channelId}", AddHistory).Methods("POST")
+	myRouter.HandleFunc("/video/addShorts/{channelId}", AddShorts).Methods("POST")
+	myRouter.HandleFunc("/video/addSubscriptions/{channelId}", AddSubscriptions).Methods("POST")
+	myRouter.HandleFunc("/video/addWatchLater/{channelId}", AddWatchLater).Methods("POST")
+	myRouter.HandleFunc("/video/addLikedVideos/{channelId}", AddLikedVideos).Methods("POST")
+	myRouter.HandleFunc("/video/addPlaylist/{channelId}", AddPlaylist).Methods("POST")
+	myRouter.HandleFunc("/video/addSubscriptionList/{channelId}", AddSubscriptionList).Methods("POST")
+	myRouter.HandleFunc("/video/addChannelList/{channelId}", AddChannelList).Methods("POST")
+	myRouter.HandleFunc("/video/addYourVideos/{channelId}", AddYourVideos).Methods("POST")
+	myRouter.HandleFunc("/video/addListPlayList/{channelId}", AddListPlaylist).Methods("POST")
 
-	// srv := &http.Server{
-	// 	Addr:    "https://vocal-starship-53117c.netlify.app/endpoint",
-	// 	Handler: myRouter,
-	// }
-
-	//go func() {
 	log.Fatal(http.ListenAndServe(":8000", myRouter))
-	//}()
-	//http.ListenAndServe("https://vocal-starship-53117c.netlify.app/endpoint", myRouter)
 	log.Info("Server started")
 
-	//<-ctx.Done()
-
 	log.Info("Server stopped")
-
-	// ctxShutDown, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	// defer func() {
-	// 	cancel()
-	// }()
-
-	//log.Info("Server exited properly")
-
-	//return srv, ctxShutDown
 }
 
 func main() {
-	//ctx, _ := context.WithCancel(context.Background())
-	//server, ctxShutDown := initServer(ctx)
 	initServer()
-	// if err := server.Shutdown(ctxShutDown); err != nil {
-	// 	log.Fatalf("server Shutdown Failed:%+s", err)
-	// }
+
 	log.Infof("Application closed")
 }

@@ -94,15 +94,6 @@ func DownlaodVideoFromKafka() {
 	kafkaConfig.Brokers = brokers
 	kafkaConfig.Topics = []string{}
 
-	// kafkaconfig := kafka.ReaderConfig{
-	// 	Brokers:         brokers,
-	// 	GroupID:         kafkaClientId,
-	// 	Topic:           kafkaTopic,
-	// 	MinBytes:        10e3,            // 10KB
-	// 	MaxBytes:        10e6,            // 10MB
-	// 	MaxWait:         1 * time.Second, // Maximum amount of time to wait for new data to come when fetching batches of messages from kafka.
-	// 	ReadLagInterval: -1,
-	// }
 	consumer, err1 := kafka.NewConsumer(&kafka.ConfigMap{
 		"bootstrap.servers": "host1:9092,host2:9092",
 		"group.id":          "foo",
@@ -129,40 +120,6 @@ func DownlaodVideoFromKafka() {
 	// signal.Notify(interruptChan, syscall.SIGINT, syscall.SIGTERM)
 	var err error
 	err = consumer.SubscribeTopics(kafkaConfig.Topics, nil)
-
-	// for {
-	// 	select {
-	// 	case <-interruptChan:
-	// 		log.Info("DownlaodVideoFromKafka got an interrupt")
-	// 		err = nil
-	// 		break
-
-	// 	case <-context.Done():
-	// 		log.Info("DownlaodVideoFromKafka got a context closure")
-	// 		err = nil
-	// 		break
-	// 	default:
-	// msg, err := reader.ReadMessage(context)
-	// if err != nil {
-	// 	//log.Error().Msgf("error while receiving message: %s", err.Error())
-	// 	log.Errorf("error while receiving message: %s", err.Error())
-	// 	continue
-	// } else if msg != nil {
-	// 	log.Infof("message at topic/partition/offset %v/%v/%v: %s\n", msg.Topic, msg.Partition, msg.Offset, string(msg.value))
-
-	// 	if err = encoder.Encode(msg.value); err != nil {
-	// 		err = fmt.Errorf("Error while encoding with gob: %v", err)
-	// 		break
-	// 	}
-	// } else {
-	// 	log.Infof("Messages are not coming")
-	// }
-	// 	}
-	// }
-
-	// if err := reader.Close(); err != nil {
-	// 	log.Fatal("failed to close reader:", err)
-	// }
 
 	go func() {
 		var run bool

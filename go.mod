@@ -8,6 +8,7 @@ require (
 	github.com/burhankangsi/LetsYouTube v0.0.0-20220508202637-b1a88100e1f5
 	github.com/confluentinc/confluent-kafka-go v1.8.2
 	github.com/gorilla/mux v1.8.0
+	github.com/lib/pq v1.10.6
 	github.com/segmentio/kafka-go v0.4.31
 	github.com/sirupsen/logrus v1.8.1
 )
