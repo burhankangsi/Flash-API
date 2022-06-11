@@ -535,20 +535,22 @@ func Channellist(w http.ResponseWriter, r *http.Request) {
 }
 
 func ListChannelVideos(w http.ResponseWriter, r *http.Request) {
+	//lists all the videos belonging to a particular channel
+	//usually called when a channel is searched in search page
 	fmt.Fprintf(w, "List of videos will be displayed here")
 	w.Header().Set("Content-Type", "application/json")
 	w.Header().Set("Access-Control-Allow-Origin", "*")
 
 	params := mux.Vars(r)
-	userChannelId, ok := params["channelId"]
+	channelId, ok := params["channelId"]
 	if !ok {
 		log.Errorf("User channel ID is missing in parameters")
 	}
-	log.Infof("user channelId is %v", userChannelId)
+	log.Infof("user channelId is %v", channelId)
 
 	db := getConnection()
 	defer db.Close()
-	rows, err := db.Query("SELECT video_id, video_name, video_channel_id, length, title, channelImage, views, timestamp, channelName, thumbnail, upload_date, upload_time FROM videos.history where channel_id=$1 order by upload_time desc", userChannelId)
+	rows, err := db.Query("SELECT video_id, video_name, video_channel_id, length, title, channelImage, views, timestamp, channelName, thumbnail, upload_date, upload_time FROM videos.history where video_channel_id=$1 order by upload_time desc", channelId)
 	if err != nil {
 		panic(err)
 	}
@@ -570,7 +572,7 @@ func ListChannelVideos(w http.ResponseWriter, r *http.Request) {
 		panic(err)
 	}
 
-	log.Infof("history videos for user %v are %v", userChannelId, videoArr)
+	log.Infof("history videos for user %v are %v", channelId, videoArr)
 	// images, err := ListObjectsFromS3ListChannel(userChannelId)
 	// if err != nil {
 	// 	panic(err)
