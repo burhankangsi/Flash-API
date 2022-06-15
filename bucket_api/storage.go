@@ -13,20 +13,6 @@ type awsCreds struct {
 	session *session.Session
 }
 
-// func saveToBucket() {
-
-// 	ret := retrieve{}
-// 	buffer := new(bytes.Buffer)
-// 	buffer.ReadFrom(ret.pipeReader)
-// 	res := buffer.Bytes()
-
-// 	// Upload Files
-// 	err = uploadFile(session, res)
-// 	if err != nil {
-// 		log.Fatal(err)
-// 	}
-// }
-
 func createAWSSession() {
 	var currAws awsCreds
 	session, err := session.NewSession(&aws.Config{Region: aws.String("ap-south-1")})
