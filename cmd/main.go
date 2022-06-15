@@ -2016,10 +2016,15 @@ func InitServer() {
 	myRouter.HandleFunc("/video/addYourVideos/{channelId}", AddYourVideos).Methods("POST")
 	myRouter.HandleFunc("/video/addListPlayList/{channelId}", AddListPlaylist).Methods("POST")
 
-	log.Fatal(http.ListenAndServe(":8000", myRouter))
+	// log.Fatal(http.ListenAndServe(":8000", myRouter))
+	port := os.Getenv("PORT")
+	log.Infof("Listening on port: %v", port)
+	address := fmt.Sprintf("%s:%s", "0.0.0.0", port)
+
+	log.Fatal(http.ListenAndServe(address, myRouter))
 	log.Info("Server started")
 
-	log.Info("Server stopped")
+	//log.Info("Server stopped")
 }
 
 func main() {
